@@ -1,0 +1,122 @@
+div.proofBlock {
+  font-family: "Playfair Display";
+  font-size: 16pt;
+  background: #FDF1DD;
+  border-radius: 6px;
+  border: 2px solid #F7A50F;
+  padding: 5px;
+}
+
+.formula {
+  font-family: "Playfair Display";
+}
+
+span.subproof {
+  display: inline-table;
+  xxxborder: 1px solid red;
+  margin: 5px;
+  text-align: center;
+  vertical-align: bottom;
+}
+
+hr.ruled {
+  border-top: 2px solid black;
+  border-bottom: 0px;
+  border-left: 0px;
+  border-right: 0px;
+  margin: 0px;
+}
+
+hr.unruled {
+  border-top: 3px dotted red;
+  border-bottom: 0px;
+  border-left: 0px;
+  border-right: 0px;
+  background: inherit;
+  height: 1px;
+  margin: 0px;
+}
+
+span.rulename {
+  position:relative;
+  font-size:80%;
+  top:-1.3em;
+}
+
+span.namedRule {
+  margin: 0px 10px;
+}
+
+span.removable {
+   cursor: url("del.png");
+}
+
+span.unruled  {
+   cursor: pointer;
+}
+
+.tooltip {
+  visibility: hidden;
+  width: 160px;
+  background-color: #FFDEA3;
+  text-align: center;
+  border-radius: 6px;
+  border: 1px solid #F7A50F;
+  padding: 5px;
+  text-align: left;
+  font-family: Arial;
+  font-size:10pt;
+  /* Position the tooltip */
+  position: absolute;
+  z-index: 1;
+}
+
+.schema {
+  background-color: #FDF1DD;
+  border: 1px solid #F7A50F;
+  border-radius: 3px;
+  text-align: center;
+  font-family: "Playfair Display";
+  font-size: 16pt;
+}
+
+.prompted {
+  color: #AC6F00;
+}
+
+.openPremises .tooltip {
+}
+
+#menu div:hover .tooltip {
+  left: 300px;
+  visibility: visible;
+}
+
+#menu input {
+  width: auto;
+}
+
+.openPremises:hover .tooltip {
+  top:70px;
+  visibility: visible;
+}
+
+#menu {
+  position: absolute;
+  background-color: #f1f1f1;
+  min-width: 100px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+/* Links inside the dropdown */
+#menu div {
+  color: black;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+}
+
+#menu > div:hover {
+  background-color: #F7A50F;
+}
