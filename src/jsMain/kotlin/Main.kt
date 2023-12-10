@@ -11,28 +11,11 @@ import org.w3c.dom.*
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
 
-var theProofTree : ProofTree? = null
+const val defaultFormula = "P & Q -> Q & P"
 
+var theProofTree : ProofTree? = null
 var lastMenuEvent: Event? = null
 
-fun getPosition(e: MouseEvent): Pair<Double, Double> {
-    var posx = 0.0;
-    var posy = 0.0;
-
-    if (e.pageY != 0.0 || e.pageX != 0.0) {
-        posx = e.pageX;
-        posy = e.pageY;
-    } else if (e.clientX != 0 || e.clientY != 0) {
-        posx = e.clientX +
-                (document.body ?: FAIL("no body")).scrollLeft +
-                (document.documentElement ?: FAIL("no doc elem")).scrollLeft;
-        posy = e.clientY +
-                (document.body ?: FAIL("no body")).scrollTop +
-                (document.documentElement ?: FAIL("no doc elem")).scrollTop;
-    }
-
-    return Pair(posx, posy);
-}
 
 fun clickLeaf(e: Event, idx: String) {
     val mouseEv = e as MouseEvent
@@ -55,6 +38,10 @@ fun FAIL(m: String): Nothing = throw RuntimeException(m)
 
 fun main() {
 
+//    val erg = window.prompt("Formel eingeben") ?: FAIL("???")
+//    val formula = formulaGrammar.parseToEnd(erg)
+//    window.alert(formula.toString() + " " + formula.toASCII())
+
     window.onclick = { event ->
         println(event.target)
         if(event != lastMenuEvent && event.target !is HTMLInputElement) {
@@ -68,7 +55,7 @@ fun main() {
         val qmark = document.URL.indexOf('?')
         val argFormula = if(qmark > 0)
             decode(document.URL.substring(qmark + 1))
-        else "P & Q => Q & P"
+        else defaultFormula
 
         try {
             println(argFormula)

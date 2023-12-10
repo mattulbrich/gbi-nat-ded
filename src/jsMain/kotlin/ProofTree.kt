@@ -81,30 +81,30 @@ data class ProofTree(val formula: Formula, val appliedRule: ProofRule?, val chil
         menu.append {
             tree.getApplicableRules(availAssumptions).forEach {
                 div {
-                        onClickFunction = { e ->
-                            if(e.target !is HTMLInputElement) {
-                                // Ignore clicks in input fields
-                                menu.style.display = "none"
-                                val tr = theProofTree ?: FAIL("missing main tree")
-                                println(it.displayName)
-                                if (it.promptedVar != null) {
-                                    val inputField = document.getElementById("input-${it.name}") as HTMLInputElement
-                                    println("IF '${inputField}'")
-                                    println("IF '${inputField.value}'")
-                                    val inputText = inputField.value
-                                    try {
-                                        val inputFormula = formulaGrammar.parseToEnd(inputText)
-                                        println(inputFormula)
-                                        setProofTree(tr.apply(idx, it, inputFormula))
-                                    } catch (e: ParseException) {
-                                        window.alert("Cannot parse '$inputText' as a formula or term")
-                                    }
-                                } else {
-                                    setProofTree(tr.apply(idx, it))
+                    onClickFunction = { e ->
+                        if(e.target !is HTMLInputElement) {
+                            // Ignore clicks in input fields
+                            menu.style.display = "none"
+                            val tr = theProofTree ?: FAIL("missing main tree")
+                            println(it.displayName)
+                            if (it.promptedVar != null) {
+                                val inputField = document.getElementById("input-${it.name}") as HTMLInputElement
+                                println("IF '${inputField}'")
+                                println("IF '${inputField.value}'")
+                                val inputText = inputField.value
+                                try {
+                                    val inputFormula = formulaGrammar.parseToEnd(inputText)
+                                    println(inputFormula)
+                                    setProofTree(tr.apply(idx, it, inputFormula))
+                                } catch (e: ParseException) {
+                                    window.alert("Cannot parse '$inputText' as a formula or term")
                                 }
+                            } else {
+                                setProofTree(tr.apply(idx, it))
                             }
                         }
-                        +it.displayName
+                    }
+                    +it.displayName
                     if (it.promptedVar != null) {
                         unsafe {+ "&nbsp;&nbsp;${it.promptedVar}=" }
                         input(InputType.text) {
@@ -196,89 +196,4 @@ data class ProofTree(val formula: Formula, val appliedRule: ProofRule?, val chil
         }
         return result
     }
-}
-
-sealed class ProofRule(val name: String, val displayName: String) {
-    abstract val schema: String
-    abstract val promptedVar: String?
-    abstract fun canApply(formula: Formula, assumptions: Set<Formula>): Boolean
-    abstract fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula? = null): List<Formula>
-}
-
-val allRules = listOf(
-    AxiomRule,
-    AndIntro, AndElim1, AndElim2,
-    ImplIntro
-)
-
-val ruleMap = allRules.map {it.name to it}.toMap()
-
-object AxiomRule: ProofRule("ax", "Ax") {
-    override val schema = "<hr> A \u2192 A"
-    override val promptedVar = null
-
-    override fun canApply(formula: Formula, assumptions: Set<Formula>): Boolean
-    {
-        val contains = assumptions.contains(formula)
-        println("$formula in $assumptions is $contains")
-        return contains
-    }
-
-//    =
-//        assumptions.contains(formula)
-
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf<Formula>()
-
-}
-
-object AndIntro: ProofRule("andI", "\u2227I") {
-    override val schema = "A &emsp; B<hr>A \u2227 B"
-    override val promptedVar = null
-
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) =
-        formula is Conj
-
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf((formula as Conj).sub1, formula.sub2)
-}
-
-object AndElim1: ProofRule("andE1", "\u2227E\u2097") {
-    override val schema = "A \u2227 <span class=\"prompted\">B</span><hr>A"
-    override val promptedVar = "B"
-
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) = true
-
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf(Conj(formula, input ?: FAIL("input required!")))
-}
-
-object AndElim2: ProofRule("andE2", "\u2227E\u1d63") {
-    override val schema = "<span class=\"prompted\">B</span> \u2227 A<hr>A"
-    override val promptedVar = "B"
-
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) = true
-
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf(Conj(input ?: FAIL("input required!"), formula))
-}
-
-object ImplIntro: ProofRule("impI", "\u2192I") {
-    override val schema = "A \u22a2 B<hr>A \u2192 B"
-    override val promptedVar = null
-
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) =
-        formula is Implication
-
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf((formula as Implication).sub2)
-
-    fun filterAvailableAssumption(tree: ProofTree, assumptions: Set<Formula>): Set<Formula> =
-        if(tree.appliedRule == ImplIntro) {
-            assert(tree.children.size == 1, "Impl intro: ${tree.children.size}")
-            assert(tree.formula is Implication, "Impl intro w/o Impl: ${tree.formula}")
-            assumptions + (tree.formula as Implication).sub1
-        } else {
-            assumptions
-        }
 }

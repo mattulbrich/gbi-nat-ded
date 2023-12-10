@@ -8,46 +8,57 @@ import com.github.h0tk3y.betterParse.parser.Parser
 
 sealed class Formula {
     abstract val precedence: Int
+    abstract fun toASCII(): String
 }
-abstract class BinaryFormula(open val sub1: Formula, open val sub2: Formula, val op: String, prec: Int): Formula() {
+abstract class BinaryFormula(open val sub1: Formula, open val sub2: Formula, val op: String, val ascii: String, prec: Int): Formula() {
     override val precedence = prec
     override fun toString(): String {
-        val t1 = if(sub1.precedence < precedence) "($sub1)" else sub1.toString()
+        val t1 = if(sub1.precedence <= precedence) "($sub1)" else sub1.toString()
         val t2 = if(sub2.precedence < precedence) "($sub2)" else sub2.toString()
         return "$t1 $op $t2"
     }
+
+    override fun toASCII() = "(${sub1.toASCII()} $ascii ${sub2.toASCII()})"
 }
-abstract class UnaryFormula(open val sub: Formula, val op: String): Formula() {
+abstract class UnaryFormula(open val sub: Formula, val op: String, val ascii: String): Formula() {
     override val precedence = 100
     override fun toString(): String {
         val t1 = if(sub.precedence < precedence) "($sub)" else sub.toString()
         return "$op $t1"
     }
+
+    override fun toASCII() = "${sub.toASCII()} $ascii"
 }
 
 // 22A2 is |-
 // 22a5 is \bot
-data class Implication(override val sub1: Formula, override val sub2: Formula) : BinaryFormula(sub1, sub2, "\u2192", 10) {
+data class Implication(override val sub1: Formula, override val sub2: Formula) : BinaryFormula(sub1, sub2, "\u2192", "->", 10) {
     override fun toString(): String = super.toString()
 }
-data class Disj(override val sub1: Formula, override val sub2: Formula) : BinaryFormula(sub1, sub2, "\u2228", 20){
+data class Disj(override val sub1: Formula, override val sub2: Formula) : BinaryFormula(sub1, sub2, "\u2228", "|", 20){
     override fun toString(): String = super.toString()
 }
-data class Conj(override val sub1: Formula, override val sub2: Formula) : BinaryFormula(sub1, sub2, "\u2227", 30) {
+data class Conj(override val sub1: Formula, override val sub2: Formula) : BinaryFormula(sub1, sub2, "\u2227", "&", 30) {
     override fun toString(): String = super.toString()
 }
-data class Neg(override val sub: Formula) : UnaryFormula(sub, "¬") {
+data class Neg(override val sub: Formula) : UnaryFormula(sub, "¬", "-") {
     override fun toString(): String = super.toString()
 }
-data class All(val id: String, override val sub: Formula) : UnaryFormula(sub, "\u2200$id") {
+object False : Formula() {
+    override val precedence = 100
+    override fun toString() = "\u22a5"
+    override fun toASCII() = "0"
+}
+data class All(val id: String, override val sub: Formula) : UnaryFormula(sub, "\u2200$id", "!$id") {
     override fun toString(): String = super.toString()
 }
-data class Ex(val id: String, override val sub: Formula) : UnaryFormula(sub, "\u2203$id") {
+data class Ex(val id: String, override val sub: Formula) : UnaryFormula(sub, "\u2203$id", "?$id") {
     override fun toString(): String = super.toString()
 }
 data class Atom(val term: Term) : Formula() {
     override val precedence = 100
     override fun toString() = term.toString()
+    override fun toASCII() = term.toString()
 }
 
 data class Term(val name: String, val args: List<Term> = listOf()) {
@@ -61,9 +72,10 @@ fun <E> List<E>.updated(index: Int, elem: E) = mapIndexed { i, existing ->  if (
 
 val formulaGrammar = object : Grammar<Formula>() {
     val id by regexToken("[A-Za-z][A-Za-z0-9]*")
+    val _false by literalToken("0")
+    val imp by literalToken("->")
     val not by literalToken("-")
     val and by literalToken("&")
-    val imp by literalToken("=>")
     val or by literalToken("|")
     val ws by regexToken("\\s+", ignore = true)
     val lpar by literalToken("(")
@@ -77,29 +89,31 @@ val formulaGrammar = object : Grammar<Formula>() {
                 map { (name, args) -> Term(name.text, args) }
         or (id map { Term(it.text, listOf()) }))
 
+///// FOL
+//    val base: Parser<Formula> by
+//        (term map { Atom(it) }
+//            or (((-not) * parser(this::base)) map { Neg(it) })
+//            or (((-all) * id * parser(this::base)) map { (id,f) -> All(id.text,f) })
+//            or (((-ex) * id * parser(this::base)) map { (id, f) -> Ex(id.text, f)})
+//            or ((-lpar) * parser(this::formula) * (-rpar)))
+
+//// Prop
+
     val base: Parser<Formula> by
-        (term map { Atom(it) }
-            or (((-not) * parser(this::base)) map { Neg(it) })
-            or (((-all) * id * parser(this::base)) map { (id,f) -> All(id.text,f) })
-            or (((-ex) * id * parser(this::base)) map { (id, f) -> Ex(id.text, f)})
-            or ((-lpar) * parser(this::formula) * (-rpar)))
+        (id map { Atom(Term(it.text)) }
+         or (_false map { False })
+         or (((-not) * parser(this::base)) map { Neg(it) })
+         or ((-lpar) * parser(this::formula) * (-rpar)))
 
     val conj: Parser<Formula> by
-        leftAssociative(base, and) { l, _, r -> Conj(l, r)}
+        rightAssociative(base, and) { l, _, r -> Conj(l, r)}
 
     val disj: Parser<Formula> by
-        leftAssociative(conj, or) { l, _, r -> Disj(l, r)}
+        rightAssociative(conj, or) { l, _, r -> Disj(l, r)}
 
     val formula: Parser<Formula> by
-        leftAssociative(disj, imp) { l, _, r -> Implication(l, r)}
+        rightAssociative(disj, imp) { l, _, r -> Implication(l, r)}
 
     override val rootParser by formula
 }
-
-fun parmain() {
-    val ast = formulaGrammar.parseToEnd("!x (P(x) | Q(c))") //  | b & -(a | c)
-    println(ast)
-}
-
-
 
