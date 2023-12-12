@@ -15,6 +15,7 @@ const val defaultFormula = "P & Q -> Q & P"
 
 var theProofTree : ProofTree? = null
 var lastMenuEvent: Event? = null
+var autoMode = false
 
 
 fun clickLeaf(e: Event, idx: String) {
@@ -57,13 +58,7 @@ fun main() {
         try {
             println(argFormula)
             val goal = formulaGrammar.parseToEnd(argFormula)
-            var pt = ProofTree(goal)
-//            pt = pt.apply("x", ImplIntro)
-//            pt = pt.apply("x0", AndIntro)
-//            pt = pt.apply("x00", AndElim2, Atom(Term("P")))
-//            pt = pt.apply("x000", AxiomRule)
-//            pt = pt.apply("x01", AndElim1, Atom(Term("Q")))
-            // pt = pt.apply("x010", AxiomRule)
+            val pt = if(autoMode) findProof(goal, listOf()) ?: ProofTree(goal) else ProofTree(goal)
             setProofTree(pt)
         } catch(e: ParseException) {
             window.alert("Cannot parse '$argFormula")
@@ -85,6 +80,7 @@ private fun interpretURL(): String {
     val parts = query.split(";")
     val result = parts.first()
     allRules = allRules.filterNot { parts.drop(1).contains(it.name) }
+    autoMode = parts.contains("auto")
     return decode(result)
 }
 
