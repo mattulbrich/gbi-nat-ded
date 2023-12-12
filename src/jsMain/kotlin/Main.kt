@@ -2,11 +2,6 @@ import com.github.h0tk3y.betterParse.grammar.parseToEnd
 import com.github.h0tk3y.betterParse.parser.ParseException
 import kotlinx.browser.document
 import kotlinx.browser.window
-import kotlinx.html.HTMLTag
-import kotlinx.html.dom.append
-import kotlinx.html.js.onClickFunction
-import kotlinx.html.js.span
-import kotlinx.html.visit
 import org.w3c.dom.*
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
@@ -31,17 +26,8 @@ fun clickLeaf(e: Event, idx: String) {
     lastMenuEvent = e
 }
 
-fun assert(B: Boolean, m:String? = null) {
-    if(!B) throw RuntimeException("Assertion failed. $m")
-}
-
-fun FAIL(m: String): Nothing = throw RuntimeException(m)
 
 fun main() {
-
-//    val erg = window.prompt("Formel eingeben") ?: FAIL("???")
-//    val formula = formulaGrammar.parseToEnd(erg)
-//    window.alert(formula.toString() + " " + formula.toASCII())
 
     window.onclick = { event ->
         println(event.target)

@@ -1,4 +1,6 @@
-import kotlinx.browser.window
+
+
+class RuleException(msg: String) : Exception(msg)
 
 sealed class ProofRule(val name: String, val displayName: String) {
     abstract val schema: String
@@ -98,8 +100,7 @@ object OrElim: ProofRule("orE", "\u2228E") {
             val b = input.sub2
             return listOf(input, Implication(a, formula), Implication(b, formula))
         } else {
-            window.alert("Für diese Regel muss die Eingabe eine Implikation sein. $formula ist keine Implikation.")
-            FAIL("No implication: $formula")
+            throw RuleException("Für diese Regel muss die Eingabe eine Implikation sein. $formula ist keine Implikation.")
         }
     }
 }
@@ -144,7 +145,7 @@ object NotIntro: ProofRule("notI", "¬I") {
         listOf(Implication((formula as Neg).sub, False))
 }
 
-object NotElim: ProofRule("notI", "¬I") {
+object NotElim: ProofRule("notE", "¬E") {
     override val schema = "<span class=\"prompted\">A &emsp; ¬A</span><hr>\u22a5"
     override val promptedVar = "A"
     override fun canApply(formula: Formula, assumptions: Set<Formula>) =

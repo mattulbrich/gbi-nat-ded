@@ -21,6 +21,13 @@ fun findProof(formula: Formula, premises: List<Formula>): ProofTree? {
             }
         }
 
+        formula is Neg -> {
+            val proof = findProof(Implication(formula.sub, False), premises)
+            if (proof != null) {
+                return ProofTree(formula, NotIntro, listOf(proof))
+            }
+        }
+
         formula is Conj -> {
             val proofA = findProof(formula.sub1, premises)
             if (proofA != null) {
@@ -63,18 +70,41 @@ fun findProof(formula: Formula, premises: List<Formula>): ProofTree? {
     return null
 }
 
-fun forwardProofs(premises: List<Formula>): Set<ProofTree> =
-    premises.flatMap {
+fun forwardProofs(premises: List<Formula>): Set<ProofTree> {
+    var result = premises.flatMap {
         val ax = ProofTree(it, AxiomRule, listOf())
         forwardProofs(premises, ax)
     }.toSet()
+
+    outer@for (p1 in result) {
+        for (p2 in result) {
+            if (p1.formula == Neg(p2.formula)) {
+                result += ProofTree(False, NotElim, listOf(p1, p2))
+                outer@ break
+            }
+        }
+    }
+
+    return result
+}
 
 fun forwardProofs(premises: List<Formula>, proofTree: ProofTree): Set<ProofTree> =
     when(proofTree.formula) {
         is Conj ->
             forwardProofs(premises, ProofTree(proofTree.formula.sub1, AndElim1, listOf(proofTree))) +
-            forwardProofs(premises, ProofTree(proofTree.formula.sub2, AndElim2, listOf(proofTree)))
-        is Disj -> {
+                    forwardProofs(premises, ProofTree(proofTree.formula.sub2, AndElim2, listOf(proofTree)))
+
+        is Neg -> {
+            val proofA = findProof(proofTree.formula.sub, premises)
+            if(proofA != null) {
+                val proof = ProofTree(False, NotElim, listOf(proofA, proofTree))
+                forwardProofs(premises, proof)
+            } else {
+                setOf()
+            }
+        }
+
+        is Implication -> {
             val proofA = findProof(proofTree.formula.sub1, premises)
             if(proofA != null) {
                 val proof = ProofTree(proofTree.formula.sub2, ImplElim, listOf(proofA, proofTree))
@@ -83,5 +113,6 @@ fun forwardProofs(premises: List<Formula>, proofTree: ProofTree): Set<ProofTree>
                 setOf()
             }
         }
+
         else -> setOf()
     } + proofTree

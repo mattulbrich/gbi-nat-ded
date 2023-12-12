@@ -1,10 +1,16 @@
 import com.github.h0tk3y.betterParse.combinators.*
 import com.github.h0tk3y.betterParse.grammar.Grammar
-import com.github.h0tk3y.betterParse.grammar.parseToEnd
 import com.github.h0tk3y.betterParse.grammar.parser
 import com.github.h0tk3y.betterParse.lexer.literalToken
 import com.github.h0tk3y.betterParse.lexer.regexToken
 import com.github.h0tk3y.betterParse.parser.Parser
+
+
+fun assert(B: Boolean, m:String? = null) {
+    if(!B) throw RuntimeException("Assertion failed. $m")
+}
+
+fun FAIL(m: String): Nothing = throw RuntimeException(m)
 
 sealed class Formula {
     abstract val precedence: Int
@@ -106,13 +112,13 @@ val formulaGrammar = object : Grammar<Formula>() {
          or ((-lpar) * parser(this::formula) * (-rpar)))
 
     val conj: Parser<Formula> by
-        rightAssociative(base, and) { l, _, r -> Conj(l, r)}
+        rightAssociative(base, and) { l, _, r -> Conj(l, r) }
 
     val disj: Parser<Formula> by
-        rightAssociative(conj, or) { l, _, r -> Disj(l, r)}
+        rightAssociative(conj, or) { l, _, r -> Disj(l, r) }
 
     val formula: Parser<Formula> by
-        rightAssociative(disj, imp) { l, _, r -> Implication(l, r)}
+        rightAssociative(disj, imp) { l, _, r -> Implication(l, r) }
 
     override val rootParser by formula
 }
