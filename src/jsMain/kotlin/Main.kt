@@ -52,10 +52,7 @@ fun main() {
     }
 
     try {
-        val qmark = document.URL.indexOf('?')
-        val argFormula = if(qmark > 0)
-            decode(document.URL.substring(qmark + 1))
-        else defaultFormula
+        val argFormula = interpretURL()
 
         try {
             println(argFormula)
@@ -76,6 +73,19 @@ fun main() {
     } catch (e: ParseException) {
         println("Cannot parse: " + e.message)
     }
+}
+
+private fun interpretURL(): String {
+    val qmark = document.URL.indexOf('?')
+    if (qmark < 0) {
+        val input = window.prompt("Input formula to be proved", defaultFormula)
+        return input ?: defaultFormula
+    }
+    val query = document.URL.substring(qmark + 1)
+    val parts = query.split(";")
+    val result = parts.first()
+    allRules = allRules.filterNot { parts.drop(1).contains(it.name) }
+    return decode(result)
 }
 
 fun setProofTree(pr: ProofTree) {

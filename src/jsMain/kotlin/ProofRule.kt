@@ -7,7 +7,7 @@ sealed class ProofRule(val name: String, val displayName: String) {
     abstract fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula? = null): List<Formula>
 }
 
-val allRules = listOf(
+var allRules = listOf(
     AxiomRule,
     AndIntro, AndElim1, AndElim2,
     OrIntro1, OrIntro2, OrElim,
@@ -87,7 +87,7 @@ object OrIntro2: ProofRule("orI2", "\u2228I\u1d63") {
         listOf((formula as Disj).sub2)
 }
 
-object OrElim: ProofRule("orE", "\u2228I") {
+object OrElim: ProofRule("orE", "\u2228E") {
     override val schema = "<span class=\"prompted\">A \u2228 B</space> &emsp; A \u2192 C &emsp; B \u2192 C<hr>C";
     override val promptedVar = "A \u2228 B"
 
