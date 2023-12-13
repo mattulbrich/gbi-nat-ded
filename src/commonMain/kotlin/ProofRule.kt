@@ -100,7 +100,7 @@ object OrElim: ProofRule("orE", "\u2228E") {
             val b = input.sub2
             return listOf(input, Implication(a, formula), Implication(b, formula))
         } else {
-            throw RuleException("Für diese Regel muss die Eingabe eine Implikation sein. $formula ist keine Implikation.")
+            throw RuleException("Für diese Regel muss die Eingabe eine Disjunktion sein. $input ist keine Implikation.")
         }
     }
 }
