@@ -5,17 +5,19 @@ import kotlinx.html.dom.append
 import kotlinx.html.dom.create
 import kotlinx.html.js.div
 import kotlinx.html.js.onClickFunction
+import kotlinx.html.js.onSubmitFunction
 import kotlinx.html.js.span
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSpanElement
+import org.w3c.dom.events.Event
 
 fun ProofTree.layout(idx: String, availablePremises: Set<Formula>): HTMLSpanElement {
     val ruledness = if (isLeaf) "unruled" else "ruled"
 
     val result = document.create.span("subproof $ruledness") {
         id = idx
-        if(isLeaf) {
+        if (isLeaf) {
             onClickFunction = { e -> clickLeaf(e, idx) }
         }
     }
@@ -48,15 +50,17 @@ fun ProofTree.layout(idx: String, availablePremises: Set<Formula>): HTMLSpanElem
                 }
         }
         // the formula
-        span("formula") { +" \u22a2 "
-            +formula.toString() }
+        span("formula") {
+            +" \u22a2 "
+            +formula.toString()
+        }
     }
     val actResult = document.create.span("namedRule")
     actResult.appendChild(result)
 
-    if(appliedRule != null)
+    if (appliedRule != null)
         actResult.append {
-            span("rulename") {  + ("(" + appliedRule.displayName + ")") }
+            span("rulename") { +("(" + appliedRule.displayName + ")") }
         }
 
     return actResult
@@ -69,57 +73,65 @@ fun ProofTree.makeMenu(idx: String, assumptions: Set<Formula> = setOf()): HTMLDi
     menu.innerHTML = ""
     menu.append {
         tree.getApplicableRules(availAssumptions).forEach {
-            div {
-                onClickFunction = { e ->
-                    if(e.target !is HTMLInputElement) {
-                        // Ignore clicks in input fields
-                        menu.style.display = "none"
-                        val tr = theProofTree ?: FAIL("missing main tree")
-                        println(it.displayName)
+            fun submit(e: Event) {
+                if (e.type == "click" && e.target is HTMLInputElement) {
+                    return
+                }
+                e.preventDefault()
+                // Ignore clicks in input fields
+                menu.style.display = "none"
+                val tr = theProofTree ?: FAIL("missing main tree")
+                println(it.displayName)
+                if (it.promptedVar != null) {
+                    val inputField = document.getElementById("input-${it.name}") as HTMLInputElement
+                    println("IF '${inputField}'")
+                    println("IF '${inputField.value}'")
+                    val inputText = inputField.value
+                    try {
+                        val inputFormula = formulaGrammar.parseToEnd(inputText)
+                        println(inputFormula)
+                        setProofTree(tr.apply(idx, it, inputFormula))
+                    } catch (e: RuntimeException) {
+                        window.alert("Cannot parse '$inputText' as a formula or term")
+                    } catch (e: RuleException) {
+                        window.alert(e.message ?: "Error while applying rules")
+                    }
+                } else {
+                    setProofTree(tr.apply(idx, it))
+                }
+            }
+            form {
+                onSubmitFunction = ::submit
+                div {
+                    onClickFunction = ::submit
+                    +it.displayName
+                    if (it.promptedVar != null) {
+                        unsafe { +"&nbsp;&nbsp;${it.promptedVar}=" }
+                        val id = "input-${it.name}"
+                        input(InputType.text) {
+                            this.id = id
+                        }
+                    }
+                    div("tooltip") {
+                        +"Schema for this rule:"
+                        div("schema") {
+                            unsafe { +it.schema }
+                        }
                         if (it.promptedVar != null) {
-                            val inputField = document.getElementById("input-${it.name}") as HTMLInputElement
-                            println("IF '${inputField}'")
-                            println("IF '${inputField.value}'")
-                            val inputText = inputField.value
-                            try {
-                                val inputFormula = formulaGrammar.parseToEnd(inputText)
-                                println(inputFormula)
-                                setProofTree(tr.apply(idx, it, inputFormula))
-                            } catch (e: RuntimeException) {
-                                window.alert("Cannot parse '$inputText' as a formula or term")
-                            } catch (e: RuleException) {
-                                window.alert(e.message ?: "Error while applying rules")
-                            }
-                        } else {
-                            setProofTree(tr.apply(idx, it))
+                            +"${it.promptedVar} must be provided!"
                         }
                     }
                 }
-                +it.displayName
-                if (it.promptedVar != null) {
-                    unsafe {+ "&nbsp;&nbsp;${it.promptedVar}=" }
-                    input(InputType.text) {
-                        id = "input-${it.name}"
-                    }
-                }
-                div("tooltip") {
-                    + "Schema for this rule:"
-                    div("schema") {
-                        unsafe { + it.schema }
-                    }
-                    if (it.promptedVar != null) {
-                        + "${it.promptedVar} must be provided!"
-                    }
-                }
             }
         }
-        if(idx != "x") {
+        if (idx != "x") {
             div {
-                onClickFunction = { e ->
-                    setProofTree((theProofTree ?: FAIL("missing main tree")).remove(idx)) }
-                + "Rückgängig"
+                onClickFunction = {
+                    setProofTree((theProofTree ?: FAIL("missing main tree")).remove(idx))
+                }
+                +"Rückgängig"
             }
         }
     }
-    return (menu as HTMLDivElement)
+    return menu
 }

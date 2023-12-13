@@ -119,6 +119,6 @@ span.unruled  {
   display: block;
 }
 
-#menu > div:hover {
+#menu > form > div:hover {
   background-color: #F7A50F;
 }
