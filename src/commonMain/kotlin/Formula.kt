@@ -1,11 +1,3 @@
-import com.github.h0tk3y.betterParse.combinators.*
-import com.github.h0tk3y.betterParse.grammar.Grammar
-import com.github.h0tk3y.betterParse.grammar.parser
-import com.github.h0tk3y.betterParse.lexer.literalToken
-import com.github.h0tk3y.betterParse.lexer.regexToken
-import com.github.h0tk3y.betterParse.parser.Parser
-
-
 fun assert(B: Boolean, m:String? = null) {
     if(!B) throw RuntimeException("Assertion failed. $m")
 }
@@ -33,7 +25,7 @@ abstract class UnaryFormula(open val sub: Formula, val op: String, val ascii: St
         return "$op $t1"
     }
 
-    override fun toASCII() = "${sub.toASCII()} $ascii"
+    override fun toASCII() = "$ascii${sub.toASCII()}"
 }
 
 // 22A2 is |-
@@ -74,52 +66,141 @@ data class Term(val name: String, val args: List<Term> = listOf()) {
 
 fun <E> List<E>.updated(index: Int, elem: E) = mapIndexed { i, existing ->  if (i == index) elem else existing }
 
+/**
+ * Currently the parser framework fails when running the exported code
+ * (although that used to work :( )
+ */
 
+object formulaGrammar {
+    fun parseToEnd(arg: String): Formula {
+        val (result, cont) = parseImpl(arg, 0)
+        if(cont != arg.length) {
+            throw RuntimeException("Unexpected trailing text: '${arg.substring(cont)}'")
+        }
+        return result
+    }
 
-val formulaGrammar = object : Grammar<Formula>() {
-    val id by regexToken("[A-Za-z][A-Za-z0-9]*")
-    val _false by literalToken("0")
-    val imp by literalToken("->")
-    val not by literalToken("-")
-    val and by literalToken("&")
-    val or by literalToken("|")
-    val ws by regexToken("\\s+", ignore = true)
-    val lpar by literalToken("(")
-    val rpar by literalToken(")")
-    val comma by literalToken(",")
-    val all by literalToken("!")
-    val ex by literalToken("?")
+    private fun skipSpaces(arg: String, cont: Int): Int {
+        var result = cont
+        while(result < arg.length && arg[result] == ' ') {
+            result++
+        }
+        return result
+    }
 
-    val term: Parser<Term> by
-        ((id * (-lpar) * separatedTerms(parser(this::term), comma, false) * (-rpar))
-                map { (name, args) -> Term(name.text, args) }
-        or (id map { Term(it.text, listOf()) }))
+    private fun hasToken(arg: String, from: Int, token: String) =
+        if(from + token.length <= arg.length) {
+            arg.substring(from, from+token.length) == token
+        } else {
+            false
+        }
 
-///// FOL
-//    val base: Parser<Formula> by
-//        (term map { Atom(it) }
-//            or (((-not) * parser(this::base)) map { Neg(it) })
-//            or (((-all) * id * parser(this::base)) map { (id,f) -> All(id.text,f) })
-//            or (((-ex) * id * parser(this::base)) map { (id, f) -> Ex(id.text, f)})
-//            or ((-lpar) * parser(this::formula) * (-rpar)))
+    private fun parseRightAssoc(arg: String, from: Int, token: String,
+                                constr: (Formula, Formula)->Formula,
+                                inner: (String, Int)->Pair<Formula,Int>): Pair<Formula, Int> {
+        var (form, cont) = inner(arg, from)
+        var forms = listOf(form)
+        while(true) {
+            cont = skipSpaces(arg, cont)
+            if(!hasToken(arg, cont, token))
+                break
+            cont = skipSpaces(arg, cont+token.length)
+            val sub = inner(arg, cont)
+            forms += sub.first
+            cont = sub.second
+        }
+        return Pair(forms.reduceRight { f1, f2 -> constr(f1, f2) }, cont)
+    }
 
-//// Prop
+    private fun parseImpl(arg: String, from: Int): Pair<Formula, Int> =
+        parseRightAssoc(arg, from, "->", ::Implication, formulaGrammar::parseDisj)
+    private fun parseDisj(arg: String, from: Int): Pair<Formula, Int> =
+        parseRightAssoc(arg, from, "|", ::Disj, formulaGrammar::parseConj)
 
-    val base: Parser<Formula> by
-        (id map { Atom(Term(it.text)) }
-         or (_false map { False })
-         or (((-not) * parser(this::base)) map { Neg(it) })
-         or ((-lpar) * parser(this::formula) * (-rpar)))
+    private fun parseConj(arg: String, from: Int): Pair<Formula, Int> =
+        parseRightAssoc(arg, from, "&", ::Conj, formulaGrammar::parseBase)
 
-    val conj: Parser<Formula> by
-        rightAssociative(base, and) { l, _, r -> Conj(l, r) }
+    private fun parseBase(arg: String, from: Int): Pair<Formula, Int> {
+        val actFrom = skipSpaces(arg, from)
+        when {
+            hasToken(arg, actFrom, "-") -> {
+                val (result, cont) = parseBase(arg, skipSpaces(arg, actFrom + 1))
+                return Pair(Neg(result), cont)
+            }
 
-    val disj: Parser<Formula> by
-        rightAssociative(conj, or) { l, _, r -> Disj(l, r) }
+            hasToken(arg, actFrom, "(") -> {
+                val (result, cont) = parseImpl(arg, skipSpaces(arg, actFrom + 1))
+                val cont2 = skipSpaces(arg, cont)
+                if (!hasToken(arg, cont2, ")")) {
+                    throw RuntimeException("Missing closing parenthesis")
+                }
+                return Pair(result, cont2+1)
+            }
 
-    val formula: Parser<Formula> by
-        rightAssociative(disj, imp) { l, _, r -> Implication(l, r) }
+            hasToken(arg, actFrom, "0") -> {
+                return Pair(False, actFrom + 1)
+            }
 
-    override val rootParser by formula
+            actFrom == arg.length -> {
+                throw RuntimeException("Unexpected end of string")
+            }
+
+            else -> {
+                val m = Regex("^[A-Za-z]+").find(arg.substring(actFrom))
+                if (m != null) {
+                    return Pair(Atom(Term(m.value)), actFrom + m.value.length)
+                } else {
+                    throw RuntimeException("Unexpected string starting at '" + arg.substring(actFrom) + "'.")
+                }
+            }
+        }
+    }
 }
 
+//val formulaGrammar = object : Grammar<Formula>() {
+//    val id by regexToken("[A-Za-z][A-Za-z0-9]*")
+//    val _false by literalToken("0")
+//    val imp by literalToken("->")
+//    val not by literalToken("-")
+//    val and by literalToken("&")
+//    val or by literalToken("|")
+//    val ws by regexToken("\\s+", ignore = true)
+//    val lpar by literalToken("(")
+//    val rpar by literalToken(")")
+//    val comma by literalToken(",")
+//    val all by literalToken("!")
+//    val ex by literalToken("?")
+//
+//    val term: Parser<Term> by
+//        ((id * (-lpar) * separatedTerms(parser(this::term), comma, false) * (-rpar))
+//                map { (name, args) -> Term(name.text, args) }
+//        or (id map { Term(it.text, listOf()) }))
+//
+/////// FOL
+////    val base: Parser<Formula> by
+////        (term map { Atom(it) }
+////            or (((-not) * parser(this::base)) map { Neg(it) })
+////            or (((-all) * id * parser(this::base)) map { (id,f) -> All(id.text,f) })
+////            or (((-ex) * id * parser(this::base)) map { (id, f) -> Ex(id.text, f)})
+////            or ((-lpar) * parser(this::formula) * (-rpar)))
+//
+////// Prop
+//
+//    val base: Parser<Formula> by
+//        (id map { Atom(Term(it.text)) }
+//         or (_false map { False })
+//         or (((-not) * parser(this::base)) map { Neg(it) })
+//         or ((-lpar) * parser(this::formula) * (-rpar)))
+//
+//    val conj: Parser<Formula> by
+//        rightAssociative(base, and) { l, _, r -> Conj(l, r) }
+//
+//    val disj: Parser<Formula> by
+//        rightAssociative(conj, or) { l, _, r -> Disj(l, r) }
+//
+//    val formula: Parser<Formula> by
+//        rightAssociative(disj, imp) { l, _, r -> Implication(l, r) }
+//
+//    override val rootParser by formula
+//}
+//

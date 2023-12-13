@@ -21,13 +21,18 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("com.github.h0tk3y.betterParse:better-parse:0.4.4")
+                // implementation("com.github.h0tk3y.betterParse:better-parse:0.4.4")
             }
         }
         val jsMain by getting {
             dependencies {
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-html-js
                 implementation("org.jetbrains.kotlinx:kotlinx-html-js:0.9.1")
+            }
+        }
+        val jvmTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
             }
         }
     }

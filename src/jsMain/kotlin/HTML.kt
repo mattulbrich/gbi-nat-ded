@@ -1,5 +1,3 @@
-import com.github.h0tk3y.betterParse.grammar.parseToEnd
-import com.github.h0tk3y.betterParse.parser.ParseException
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.html.*
@@ -87,7 +85,7 @@ fun ProofTree.makeMenu(idx: String, assumptions: Set<Formula> = setOf()): HTMLDi
                                 val inputFormula = formulaGrammar.parseToEnd(inputText)
                                 println(inputFormula)
                                 setProofTree(tr.apply(idx, it, inputFormula))
-                            } catch (e: ParseException) {
+                            } catch (e: RuntimeException) {
                                 window.alert("Cannot parse '$inputText' as a formula or term")
                             } catch (e: RuleException) {
                                 window.alert(e.message ?: "Error while applying rules")

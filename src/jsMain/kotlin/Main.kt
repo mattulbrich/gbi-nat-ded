@@ -1,5 +1,3 @@
-import com.github.h0tk3y.betterParse.grammar.parseToEnd
-import com.github.h0tk3y.betterParse.parser.ParseException
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.*
@@ -38,22 +36,18 @@ fun main() {
         Unit
     }
 
+    val argFormula = interpretURL()
+
     try {
-        val argFormula = interpretURL()
-
-        try {
-            println(argFormula)
-            val goal = formulaGrammar.parseToEnd(argFormula)
-            val pt = if(autoMode) findProof(goal, listOf()) ?: ProofTree(goal) else ProofTree(goal)
-            setProofTree(pt)
-        } catch(e: ParseException) {
-            window.alert("Cannot parse '$argFormula")
-            e.printStackTrace()
-        }
-
-    } catch (e: ParseException) {
-        println("Cannot parse: " + e.message)
+        println(argFormula)
+        val goal = formulaGrammar.parseToEnd(argFormula)
+        val pt = if(autoMode) findProof(goal) ?: ProofTree(goal) else ProofTree(goal)
+        setProofTree(pt)
+    } catch(e: RuntimeException) {
+        window.alert("Cannot parse '$argFormula'")
+        e.printStackTrace()
     }
+
 }
 
 private fun interpretURL(): String {
