@@ -21,7 +21,7 @@ var allRules = listOf(
 // needed for saving and loading
 // val ruleMap = allRules.map {it.name to it}.toMap()
 
-object AxiomRule: ProofRule("ax", "Ax") {
+data object AxiomRule: ProofRule("ax", "Ax") {
     override val schema = "<hr> A \u2192 A"
     override val promptedVar = null
 
@@ -36,7 +36,7 @@ object AxiomRule: ProofRule("ax", "Ax") {
         listOf<Formula>()
 }
 
-object AndIntro: ProofRule("andI", "\u2227I") {
+data object AndIntro: ProofRule("andI", "\u2227I") {
     override val schema = "A &emsp; B<hr>A \u2227 B"
     override val promptedVar = null
 
@@ -47,7 +47,7 @@ object AndIntro: ProofRule("andI", "\u2227I") {
         listOf((formula as Conj).sub1, formula.sub2)
 }
 
-object AndElim1: ProofRule("andE1", "\u2227E\u2097") {
+data object AndElim1: ProofRule("andE1", "\u2227E\u2097") {
     override val schema = "A \u2227 <span class=\"prompted\">B</span><hr>A"
     override val promptedVar = "B"
 
@@ -57,7 +57,7 @@ object AndElim1: ProofRule("andE1", "\u2227E\u2097") {
         listOf(Conj(formula, input ?: FAIL("input required!")))
 }
 
-object AndElim2: ProofRule("andE2", "\u2227E\u1d63") {
+data object AndElim2: ProofRule("andE2", "\u2227E\u1d63") {
     override val schema = "<span class=\"prompted\">B</span> \u2227 A<hr>A"
     override val promptedVar = "B"
 
@@ -67,7 +67,7 @@ object AndElim2: ProofRule("andE2", "\u2227E\u1d63") {
         listOf(Conj(input ?: FAIL("input required!"), formula))
 }
 
-object OrIntro1: ProofRule("orI1", "\u2228I\u2097") {
+data object OrIntro1: ProofRule("orI1", "\u2228I\u2097") {
     override val schema = "A<hr>A \u2228 B"
     override val promptedVar = null
 
@@ -78,7 +78,7 @@ object OrIntro1: ProofRule("orI1", "\u2228I\u2097") {
         listOf((formula as Disj).sub1)
 }
 
-object OrIntro2: ProofRule("orI2", "\u2228I\u1d63") {
+data object OrIntro2: ProofRule("orI2", "\u2228I\u1d63") {
     override val schema = "B<hr>A \u2228 B"
     override val promptedVar = null
 
@@ -89,8 +89,8 @@ object OrIntro2: ProofRule("orI2", "\u2228I\u1d63") {
         listOf((formula as Disj).sub2)
 }
 
-object OrElim: ProofRule("orE", "\u2228E") {
-    override val schema = "<span class=\"prompted\">A \u2228 B</space> &emsp; A \u2192 C &emsp; B \u2192 C<hr>C";
+data object OrElim: ProofRule("orE", "\u2228E") {
+    override val schema = "<span class=\"prompted\">A \u2228 B</space> &emsp; A \u2192 C &emsp; B \u2192 C<hr>C"
     override val promptedVar = "A \u2228 B"
 
     override fun canApply(formula: Formula, assumptions: Set<Formula>) = true
@@ -105,7 +105,7 @@ object OrElim: ProofRule("orE", "\u2228E") {
     }
 }
 
-object ImplIntro: ProofRule("impI", "\u2192I") {
+data object ImplIntro: ProofRule("impI", "\u2192I") {
     override val schema = "A \u22a2 B<hr>A \u2192 B"
     override val promptedVar = null
 
@@ -125,7 +125,7 @@ object ImplIntro: ProofRule("impI", "\u2192I") {
         }
 }
 
-object ImplElim: ProofRule("impE", "\u2192E") {
+data object ImplElim: ProofRule("impE", "\u2192E") {
     override val schema = "<span class=\"prompted\">A</span> &emsp; <span class=\"prompted\">A</span> \u2192 B<hr>B"
     override val promptedVar = "A"
     override fun canApply(formula: Formula, assumptions: Set<Formula>) = true
@@ -135,7 +135,7 @@ object ImplElim: ProofRule("impE", "\u2192E") {
     }
 }
 
-object NotIntro: ProofRule("notI", "¬I") {
+data object NotIntro: ProofRule("notI", "¬I") {
     override val schema = "A \u2192 \u22a5<hr>¬A"
     override val promptedVar = null
     override fun canApply(formula: Formula, assumptions: Set<Formula>) =
@@ -145,7 +145,7 @@ object NotIntro: ProofRule("notI", "¬I") {
         listOf(Implication((formula as Neg).sub, False))
 }
 
-object NotElim: ProofRule("notE", "¬E") {
+data object NotElim: ProofRule("notE", "¬E") {
     override val schema = "<span class=\"prompted\">A &emsp; ¬A</span><hr>\u22a5"
     override val promptedVar = "A"
     override fun canApply(formula: Formula, assumptions: Set<Formula>) =
@@ -159,7 +159,7 @@ object NotElim: ProofRule("notE", "¬E") {
 
 
 // NON INTUITIONISTIC!
-object ReductioAdAbsurdum: ProofRule("RAA", "RAA") {
+data object ReductioAdAbsurdum: ProofRule("RAA", "RAA") {
     override val schema = "¬A \u2192 \u22a5<hr>A"
     override val promptedVar = null
     override fun canApply(formula: Formula, assumptions: Set<Formula>) =
