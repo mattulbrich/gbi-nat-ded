@@ -79,16 +79,16 @@ fun findProof(formula: Formula, premises: List<Formula> = listOf(), alreadySeen:
 }
 
 fun forwardProofs(premises: List<Formula>, alreadySeen: Set<Formula>): Set<ProofTree> {
-    var result = premises.flatMap {
+    val result = premises.flatMap {
         val ax = ProofTree(it, AxiomRule, listOf())
         forwardProofs(premises, ax, alreadySeen)
-    }.toSet()
+    }.toMutableSet()
 
     outer@for (p1 in result) {
         for (p2 in result) {
             if (p1.formula == Neg(p2.formula)) {
                 result += ProofTree(False, NotElim, listOf(p1, p2))
-                outer@ break
+                break@outer
             }
         }
     }
