@@ -16,7 +16,11 @@ kotlin {
             binaries.executable()
         }
     }
-    jvm {}
+    jvm {
+        mainRun {
+            mainClass = "MainKt"
+        }
+    }
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -29,6 +33,7 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-html-js:0.9.1")
             }
         }
+        val jvmMain by getting
         val jvmTest by getting {
             dependencies {
                 implementation(kotlin("test"))
