@@ -1,7 +1,9 @@
 
-
-
 fun findProof(formula: Formula, premises: List<Formula> = listOf(), alreadySeen: Set<Formula> = setOf()): ProofTree? {
+
+    if(alreadySeen.contains(formula)) {
+        return null
+    }
 
     if(premises.contains(formula)) {
         return ProofTree(formula, AxiomRule, listOf())
@@ -99,28 +101,20 @@ fun forwardProofs(premises: List<Formula>, proofTree: ProofTree, alreadySeen: Se
                     forwardProofs(premises, ProofTree(proofTree.formula.sub2, AndElim2, listOf(proofTree)), alreadySeen)
 
         is Neg -> {
-            if(!alreadySeen.contains(proofTree.formula.sub)) {
-                val proofA = findProof(proofTree.formula.sub, premises, alreadySeen)
-                if (proofA != null) {
-                    val proof = ProofTree(False, NotElim, listOf(proofA, proofTree))
-                    forwardProofs(premises, proof, alreadySeen)
-                } else {
-                    setOf()
-                }
+            val proofA = findProof(proofTree.formula.sub, premises, alreadySeen)
+            if (proofA != null) {
+                val proof = ProofTree(False, NotElim, listOf(proofA, proofTree))
+                forwardProofs(premises, proof, alreadySeen)
             } else {
                 setOf()
             }
         }
 
         is Implication -> {
-            if(!alreadySeen.contains(proofTree.formula.sub1)) {
-                val proofA = findProof(proofTree.formula.sub1, premises, alreadySeen)
-                if(proofA != null) {
-                    val proof = ProofTree(proofTree.formula.sub2, ImplElim, listOf(proofA, proofTree))
-                    forwardProofs(premises, proof, alreadySeen)
-                } else {
-                    setOf()
-                }
+            val proofA = findProof(proofTree.formula.sub1, premises, alreadySeen)
+            if(proofA != null) {
+                val proof = ProofTree(proofTree.formula.sub2, ImplElim, listOf(proofA, proofTree))
+                forwardProofs(premises, proof, alreadySeen)
             } else {
                 setOf()
             }
