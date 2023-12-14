@@ -1,6 +1,9 @@
+import org.ajoberstar.grgit.Grgit
+
 plugins {
     kotlin("multiplatform") version "1.9.21"
     distribution
+    id("org.ajoberstar.grgit") version "4.1.0"
 }
 
 group = "edu.kit.kastel.formal"
@@ -8,6 +11,17 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+}
+
+tasks {
+    register("expandVersion") {
+        doLast {
+            println("aha")
+            val gitsha = grgit.head().abbreviatedId
+            File("${projectDir}/src/jsMain/resources/version.js").
+              writeText("console.log('v1 ($gitsha)');")
+        }
+    }
 }
 
 kotlin {
