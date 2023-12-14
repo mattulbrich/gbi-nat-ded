@@ -8,66 +8,80 @@ import kotlinx.html.js.onClickFunction
 import kotlinx.html.js.onSubmitFunction
 import kotlinx.html.js.span
 import org.w3c.dom.HTMLDivElement
+import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSpanElement
 import org.w3c.dom.events.Event
 
-fun ProofTree.layout(idx: String, availablePremises: Set<Formula>): HTMLSpanElement {
-    val ruledness = if (isLeaf) "unruled" else "ruled"
-
-    val result = document.create.span("subproof $ruledness") {
-        id = idx
-        if (isLeaf) {
-            onClickFunction = { e -> clickLeaf(e, idx) }
-        }
+fun ProofTree.layout(idx: String, availablePremises: Set<Formula>, atGap: Boolean = false,
+                     consumer: TagConsumer<*>) {
+    val ruledness = when {
+        isLeaf -> "unruled"
+        appliedRule is Gap -> "gap"
+        else -> "ruled"
     }
 
-    val childAvailablePremises =
-        ImplIntro.filterAvailableAssumption(this, availablePremises)
+    consumer.span("namedRule") {
+        span("subproof") {
 
-    children.zip(children.indices).map { (tree, no) ->
-        result.appendChild(tree.layout("$idx$no", childAvailablePremises))
-    }
+            val childAvailablePremises =
+                ImplIntro.filterAvailableAssumption(this@layout, availablePremises)
 
-    //
-    // print premises |- formula
-    result.append {
-        hr(ruledness)
-        when {
-            // actually used premises
-            isClosed -> span { +usedAssumptions().joinToString(", ") }
-            // available premises if there are any
-            availablePremises.isNotEmpty() ->
-                span("openPremises") {
-                    +"?"
-                    span("tooltip") {
-                        +"Available premises:"
-                        availablePremises.forEach {
-                            br
+            children.zip(children.indices).map { (tree, no) ->
+                tree.layout("$idx$no", childAvailablePremises, appliedRule is Gap, this.consumer)
+            }
+
+            hr(ruledness)
+
+            //
+            // print premises |- formula
+            when {
+                // actually used premises
+                isClosed -> span { +usedAssumptions().joinToString(", ") }
+
+                // available premises if there are any
+                availablePremises.isNotEmpty() -> {
+                    availablePremises.forEach {
+                        var count = 0
+                        span("openPremise") {
+                            onClickFunction = { e -> clickPremise(e, idx, count) }
                             +it.toString()
                         }
+                        if (count > 0) {
+                            +", "
+                        }
+                        count++
                     }
+//                if (afterGap) {
+//                    onClickFunction = { e -> clickForward(e, idx) }
+//                }
                 }
-        }
-        // the formula
-        span("formula") {
+            }
+
+            // |-
             +" \u22a2 "
-            +formula.toString()
+
+            // the formula
+            span("formula") {
+
+                +formula.toString()
+
+                id = idx
+                when {
+                    isLeaf -> onClickFunction = { e -> clickLeaf(e, idx) }
+                    atGap -> onClickFunction = { e -> clickForward(e, idx) }
+                }
+
+            }
+        }
+        span("rulename") {
+            +("(" + appliedRule.displayName + ")")
         }
     }
-    val actResult = document.create.span("namedRule")
-    actResult.appendChild(result)
-
-    if (appliedRule != null)
-        actResult.append {
-            span("rulename") { +("(" + appliedRule.displayName + ")") }
-        }
-
-    return actResult
 }
 
 
-fun ProofTree.makeMenu(idx: String, assumptions: Set<Formula> = setOf()): HTMLDivElement {
+fun ProofTree.makeMenu(idx: String, forward: Boolean): HTMLDivElement {
     val (tree, availAssumptions) = navigate(idx)
     val menu = document.getElementById("menu") as HTMLDivElement
     menu.innerHTML = ""

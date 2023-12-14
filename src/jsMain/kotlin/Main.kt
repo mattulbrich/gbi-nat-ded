@@ -1,5 +1,9 @@
 import kotlinx.browser.document
 import kotlinx.browser.window
+import kotlinx.html.dom.append
+import kotlinx.html.dom.create
+import kotlinx.html.js.html
+import kotlinx.html.js.span
 import org.w3c.dom.*
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
@@ -12,6 +16,19 @@ var autoMode = false
 
 
 fun clickLeaf(e: Event, idx: String) {
+    val mouseEv = e as MouseEvent
+    println(idx)
+
+    val proofTree = theProofTree ?: return
+
+    println(proofTree.getApplicableRules(idx).map { it.name });
+    val menu = proofTree.makeMenu(idx)
+//    val mousePos =
+    menu.setAttribute("style", "left: ${mouseEv.pageX}px; top: ${mouseEv.pageY}px;")
+    lastMenuEvent = e
+}
+
+fun clickForward(e: Event, idx: String) {
     val mouseEv = e as MouseEvent
     println(idx)
 
@@ -59,7 +76,6 @@ private fun interpretURL(): String {
     val query = document.URL.substring(qmark + 1)
     val parts = query.split(";")
     val result = parts.first()
-    allRules = allRules.filterNot { parts.drop(1).contains(it.name) }
     autoMode = parts.contains("auto")
     return decode(result)
 }
@@ -67,8 +83,10 @@ private fun interpretURL(): String {
 fun setProofTree(pr: ProofTree) {
     val p2 = document.getElementById("proof2") ?: TODO()
     p2.children.asList().forEach { p2.removeChild(it) }
-    val span = pr.layout("x", setOf())
-    p2.appendChild(span)
+    val container = document.create.html {
+        pr.layout("x", setOf(), false, consumer)
+    }
+    p2.appendChild(container.firstChild ?: FAIL("cannot happen"))
     theProofTree = pr
 }
 
