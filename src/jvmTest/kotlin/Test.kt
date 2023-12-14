@@ -46,4 +46,26 @@ internal class GrammarTest {
             }
         }
     }
+
+    val proofCases: List<String> =
+        listOf(
+            "P -> Q -> P",
+            "P -> -P -> 0",
+            "P&(Q|R)->(P->-R)->(Q|E)",
+            "C&D|E->E|D"
+        )
+
+    @Test
+    fun testProof() {
+        proofCases.forEach {
+            println(it)
+            val formula = formulaGrammar.parseToEnd(it)
+            val pt = findProof(formula)
+            if (pt == null) {
+                fail("No proof found")
+            }
+            pt.printTree()
+            pt.verify()
+        }
+    }
 }

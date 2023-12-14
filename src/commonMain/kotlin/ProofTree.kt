@@ -26,7 +26,20 @@ data class ProofTree(val formula: Formula, val appliedRule: ProofRule?, val chil
             val updChildren = children.updated(no, children[no].apply(dropped, rule, input, newass))
             return ProofTree(formula, appliedRule, updChildren)
         }
+    }
 
+    fun verify(assumptions: Set<Formula> = setOf()) {
+        if (appliedRule != null) {
+            val input = appliedRule.recoverInput(children)
+            val result = appliedRule.apply(formula, assumptions, input)
+            val childFormulas = children.map { it.formula }
+            if(result != childFormulas) {
+                FAIL("DIFF. place details here")
+            }
+
+            val newAssumptions = if(appliedRule == ImplIntro) assumptions + (formula as Implication).sub1 else assumptions
+            children.forEach { it.verify(newAssumptions) }
+        }
     }
 
     fun navigate(idx: String): Pair<ProofTree, Set<Formula>> {

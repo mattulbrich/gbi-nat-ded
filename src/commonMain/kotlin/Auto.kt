@@ -3,10 +3,6 @@
 
 fun findProof(formula: Formula, premises: List<Formula> = listOf(), alreadySeen: Set<Formula> = setOf()): ProofTree? {
 
-    if (alreadySeen.contains(formula)) {
-        return null
-    }
-
     if(premises.contains(formula)) {
         return ProofTree(formula, AxiomRule, listOf())
     }
@@ -117,10 +113,14 @@ fun forwardProofs(premises: List<Formula>, proofTree: ProofTree, alreadySeen: Se
         }
 
         is Implication -> {
-            val proofA = findProof(proofTree.formula.sub1, premises, alreadySeen)
-            if(proofA != null) {
-                val proof = ProofTree(proofTree.formula.sub2, ImplElim, listOf(proofA, proofTree))
-                forwardProofs(premises, proof, alreadySeen)
+            if(!alreadySeen.contains(proofTree.formula.sub1)) {
+                val proofA = findProof(proofTree.formula.sub1, premises, alreadySeen)
+                if(proofA != null) {
+                    val proof = ProofTree(proofTree.formula.sub2, ImplElim, listOf(proofA, proofTree))
+                    forwardProofs(premises, proof, alreadySeen)
+                } else {
+                    setOf()
+                }
             } else {
                 setOf()
             }

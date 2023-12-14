@@ -7,6 +7,9 @@ sealed class ProofRule(val name: String, val displayName: String) {
     abstract val promptedVar: String?
     abstract fun canApply(formula: Formula, assumptions: Set<Formula>): Boolean
     abstract fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula? = null): List<Formula>
+    open fun recoverInput(children: List<ProofTree>): Formula? {
+        return null
+    }
 }
 
 var allRules = listOf(
@@ -28,12 +31,13 @@ data object AxiomRule: ProofRule("ax", "Ax") {
     override fun canApply(formula: Formula, assumptions: Set<Formula>): Boolean
     {
         val contains = assumptions.contains(formula)
-        println("$formula in $assumptions is $contains")
+        // println("$formula in $assumptions is $contains")
         return contains
     }
 
     override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
         listOf<Formula>()
+
 }
 
 data object AndIntro: ProofRule("andI", "\u2227I") {
@@ -45,6 +49,7 @@ data object AndIntro: ProofRule("andI", "\u2227I") {
 
     override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
         listOf((formula as Conj).sub1, formula.sub2)
+
 }
 
 data object AndElim1: ProofRule("andE1", "\u2227E\u2097") {
@@ -55,6 +60,8 @@ data object AndElim1: ProofRule("andE1", "\u2227E\u2097") {
 
     override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
         listOf(Conj(formula, input ?: FAIL("input required!")))
+
+    override fun recoverInput(children: List<ProofTree>) = (children[0].formula as Conj).sub2
 }
 
 data object AndElim2: ProofRule("andE2", "\u2227E\u1d63") {
@@ -65,6 +72,8 @@ data object AndElim2: ProofRule("andE2", "\u2227E\u1d63") {
 
     override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
         listOf(Conj(input ?: FAIL("input required!"), formula))
+    override fun recoverInput(children: List<ProofTree>) =
+        (children[0].formula as Conj).sub1
 }
 
 data object OrIntro1: ProofRule("orI1", "\u2228I\u2097") {
@@ -103,6 +112,9 @@ data object OrElim: ProofRule("orE", "\u2228E") {
             throw RuleException("Für diese Regel muss die Eingabe eine Disjunktion sein. $input ist keine Implikation.")
         }
     }
+
+    override fun recoverInput(children: List<ProofTree>): Formula? =
+        children[0].formula
 }
 
 data object ImplIntro: ProofRule("impI", "\u2192I") {
@@ -133,6 +145,9 @@ data object ImplElim: ProofRule("impE", "\u2192E") {
         val inp = input ?: FAIL("Missing formula")
         return listOf(inp, Implication(inp, formula))
     }
+
+    override fun recoverInput(children: List<ProofTree>) =
+        children[0].formula
 }
 
 data object NotIntro: ProofRule("notI", "¬I") {
@@ -155,6 +170,9 @@ data object NotElim: ProofRule("notE", "¬E") {
         val inp = input ?: FAIL("Missing formula")
         return listOf(inp, Neg(inp))
     }
+
+    override fun recoverInput(children: List<ProofTree>) =
+        children[0].formula
 }
 
 
