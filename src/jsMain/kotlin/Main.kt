@@ -21,9 +21,7 @@ fun clickLeaf(e: Event, idx: String) {
 
     val proofTree = theProofTree ?: return
 
-    println(proofTree.getApplicableRules(idx).map { it.name });
-    val menu = proofTree.makeMenu(idx)
-//    val mousePos =
+    val menu = proofTree.makeMenu(idx, false)
     menu.setAttribute("style", "left: ${mouseEv.pageX}px; top: ${mouseEv.pageY}px;")
     lastMenuEvent = e
 }
@@ -34,13 +32,17 @@ fun clickForward(e: Event, idx: String) {
 
     val proofTree = theProofTree ?: return
 
-    println(proofTree.getApplicableRules(idx).map { it.name });
-    val menu = proofTree.makeMenu(idx)
-//    val mousePos =
+    val menu = proofTree.makeMenu(idx, forward = true)
     menu.setAttribute("style", "left: ${mouseEv.pageX}px; top: ${mouseEv.pageY}px;")
     lastMenuEvent = e
 }
 
+fun clickPremise(e: Event, idx: String, number: Int) {
+    val mouseEv = e as MouseEvent
+    val menu = makeAssumptionMenu(idx, number)
+    menu.setAttribute("style", "left: ${mouseEv.pageX}px; top: ${mouseEv.pageY}px;")
+    lastMenuEvent = e
+}
 
 fun main() {
 
@@ -64,7 +66,6 @@ fun main() {
         window.alert("Cannot parse '$argFormula'")
         e.printStackTrace()
     }
-
 }
 
 private fun interpretURL(): String {

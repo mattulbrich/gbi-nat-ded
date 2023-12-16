@@ -40,15 +40,16 @@ fun ProofTree.layout(idx: String, availablePremises: Set<Formula>, atGap: Boolea
                 isClosed -> span { +usedAssumptions().joinToString(", ") }
 
                 // available premises if there are any
-                availablePremises.isNotEmpty() -> {
+                availablePremises.isNotEmpty() -> span("openPremises") {
+                    var count = 0
                     availablePremises.forEach {
-                        var count = 0
-                        span("openPremise") {
-                            onClickFunction = { e -> clickPremise(e, idx, count) }
-                            +it.toString()
-                        }
                         if (count > 0) {
                             +", "
+                        }
+                        span("clickable") {
+                            val countval = count
+                            onClickFunction = { e -> clickPremise(e, idx, countval) }
+                            +it.toString()
                         }
                         count++
                     }
@@ -61,8 +62,9 @@ fun ProofTree.layout(idx: String, availablePremises: Set<Formula>, atGap: Boolea
             // |-
             +" \u22a2 "
 
+            val clickable = if(isLeaf || atGap) " clickable" else ""
             // the formula
-            span("formula") {
+            span("formula$clickable") {
 
                 +formula.toString()
 
@@ -74,66 +76,63 @@ fun ProofTree.layout(idx: String, availablePremises: Set<Formula>, atGap: Boolea
 
             }
         }
-        span("rulename") {
-            +("(" + appliedRule.displayName + ")")
-        }
+        if(appliedRule != null && appliedRule != Gap)
+            span("rulename") {
+                +("(" + appliedRule.displayName + ")")
+            }
     }
 }
 
+fun makeAssumptionMenu(idx: String, number: Int): HTMLDivElement {
+    val menu = document.getElementById("menu") as HTMLDivElement
+    menu.innerHTML = ""
+    menu.append {
+        div {
+            onClickFunction = { e ->
+                e.preventDefault()
+                println(number)
+                // Ignore clicks in input fields
+                menu.style.display = "none"
+                val tr = theProofTree ?: FAIL("missing main tree")
+                val (_, assumptions) = tr.navigate(idx)
+                val formula = assumptions.toList()[number]
+                val newTree = tr.startForwardProof(idx, formula).removeGaps()
+                setProofTree(newTree)
+            }
+            + "Elaborate"
+            div("tooltip") {
+                + "Schema for the rule"
+                div("schema") {
+                    unsafe { +AxiomRule.schema }
+                }
+            }
+        }
+    }
+    return menu
+}
 
 fun ProofTree.makeMenu(idx: String, forward: Boolean): HTMLDivElement {
     val (tree, availAssumptions) = navigate(idx)
     val menu = document.getElementById("menu") as HTMLDivElement
     menu.innerHTML = ""
     menu.append {
-        tree.getApplicableRules(availAssumptions).forEach {
+        tree.getApplicableRules(availAssumptions, forward).forEach {
             fun submit(e: Event) {
-                if (e.type == "click" && e.target is HTMLInputElement) {
-                    return
-                }
                 e.preventDefault()
                 // Ignore clicks in input fields
                 menu.style.display = "none"
                 val tr = theProofTree ?: FAIL("missing main tree")
                 println(it.displayName)
-                if (it.promptedVar != null) {
-                    val inputField = document.getElementById("input-${it.name}") as HTMLInputElement
-                    println("IF '${inputField}'")
-                    println("IF '${inputField.value}'")
-                    val inputText = inputField.value
-                    try {
-                        val inputFormula = formulaGrammar.parseToEnd(inputText)
-                        println(inputFormula)
-                        setProofTree(tr.apply(idx, it, inputFormula))
-                    } catch (e: RuntimeException) {
-                        window.alert("Cannot parse '$inputText' as a formula or term")
-                    } catch (e: RuleException) {
-                        window.alert(e.message ?: "Error while applying rules")
-                    }
-                } else {
-                    setProofTree(tr.apply(idx, it))
-                }
+                val newTree = tr.apply(idx, it).removeGaps()
+                setProofTree(newTree)
             }
-            form {
-                onSubmitFunction = ::submit
-                div {
-                    onClickFunction = ::submit
-                    +it.displayName
-                    if (it.promptedVar != null) {
-                        unsafe { +"&nbsp;&nbsp;${it.promptedVar}=" }
-                        val id = "input-${it.name}"
-                        input(InputType.text) {
-                            this.id = id
-                        }
-                    }
-                    div("tooltip") {
-                        +"Schema for this rule:"
-                        div("schema") {
-                            unsafe { +it.schema }
-                        }
-                        if (it.promptedVar != null) {
-                            +"${it.promptedVar} must be provided!"
-                        }
+            div {
+                onClickFunction = ::submit
+                +it.displayName
+                div("tooltip") {
+                    + "Schema for this rule:"
+                    div("schema") {
+                        unsafe { +it.schema }
                     }
                 }
             }
@@ -141,9 +140,9 @@ fun ProofTree.makeMenu(idx: String, forward: Boolean): HTMLDivElement {
         if (idx != "x") {
             div {
                 onClickFunction = {
-                    setProofTree((theProofTree ?: FAIL("missing main tree")).remove(idx))
+                    setProofTree((theProofTree ?: FAIL("missing main tree")).remove(idx).removeGaps())
                 }
-                +"Rückgängig"
+                + "Rückgängig"
             }
         }
     }

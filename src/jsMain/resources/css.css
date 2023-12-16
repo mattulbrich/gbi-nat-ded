@@ -21,6 +21,14 @@ span.subproof {
   vertical-align: bottom;
 }
 
+span.openPremises {
+  color: darkgray;
+}
+
+span.clickable {
+  cursor: pointer;
+}
+
 hr.ruled {
   border-top: 2px solid black;
   border-bottom: 0px;
@@ -39,6 +47,14 @@ hr.unruled {
   margin: 0px;
 }
 
+hr.gap {
+  border: 1px solid #f7a50f;
+  height: 20px;
+  margin: 0;
+  background-image: linear-gradient(45deg, #f7a50f 25%, transparent 25%, transparent 50%, #f7a50f 50%, #f7a50f 75%, transparent 75%, transparent 100%);
+  background-size: 14.14px 14.14px;
+}
+
 span.rulename {
   position:relative;
   font-size:80%;
@@ -47,14 +63,6 @@ span.rulename {
 
 span.namedRule {
   margin: 0px 10px;
-}
-
-span.removable {
-   cursor: url("del.png");
-}
-
-span.unruled  {
-   cursor: pointer;
 }
 
 .tooltip {

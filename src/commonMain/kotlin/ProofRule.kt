@@ -2,129 +2,104 @@
 
 class RuleException(msg: String) : Exception(msg)
 
+fun ProofTree.extendLeaf(rule:ProofRule, children: List<ProofTree>): ProofTree {
+    assert(isLeaf, "tree expected to be a leaf");
+    return ProofTree(formula, rule, children)
+}
+
 sealed class ProofRule(val name: String, val displayName: String) {
     abstract val schema: String
-    abstract fun canApply(formula: Formula, assumptions: Set<Formula>): Boolean
-    abstract fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula? = null): List<Formula>
-    open fun recoverInput(children: List<ProofTree>): Formula? {
-        return null
+    abstract fun canApply(formula: Formula, forward: Boolean): Boolean
+    abstract fun apply(proofTree: ProofTree, input: Formula? = null): ProofTree
+    open fun check(proofTree: ProofTree, assumptions: Set<Formula>) {
     }
 }
 
-var backwardRules = listOf(
-    AndIntro,
-    OrIntro1, OrIntro2,
-    ImplIntro,
-    NotIntro,
-    ReductioAdAbsurdum
+var allRules = listOf(
+    // backwards:
+    AndIntro, OrIntro1, OrIntro2, ImplIntro, NotIntro, ReductioAdAbsurdum,
+    // forwards:
+    AndElim1, AndElim2, OrElim, ImplElim, NotElim,
 )
 
-var forwardRules = listOf(
-    AndElim1, AndElim2, OrElim,
-    ImplElim, NotElim,
-)
+val ruleMap = allRules.map { it.name to it }.toMap()
 
 data object Gap: ProofRule("GAP", "GAP") {
-    override val schema = FAIL("does not apply")
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) = true
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
+    override val schema
+        get() = FAIL("does not apply")
+
+    override fun canApply(formula: Formula, forward: Boolean) =
+        false // the application mechanism for assumptions is outside the usual mode
+
+    override fun apply(proofTree: ProofTree, input: Formula?): ProofTree =
         FAIL("does not apply")
 }
 
 data object AxiomRule: ProofRule("ax", "Ax") {
     override val schema = "<hr> A \u2192 A"
 
-    override fun canApply(formula: Formula, assumptions: Set<Formula>): Boolean
-    {
-        val contains = assumptions.contains(formula)
-        // println("$formula in $assumptions is $contains")
-        return contains
+    override fun canApply(formula: Formula, forward: Boolean): Boolean =
+        false // the application mechanism for assumptions is outside the usual mode
+
+    override fun apply(proofTree: ProofTree, input: Formula?): ProofTree {
+        assert(proofTree.appliedRule == null)
+        assert(input != null)
+        return ProofTree(
+            proofTree.formula, Gap, listOf(
+                ProofTree(input!!, this, listOf())
+            )
+        )
     }
 
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf<Formula>()
-
 }
+
+// Backward rules:
 
 data object AndIntro: ProofRule("andI", "\u2227I") {
     override val schema = "A &emsp; B<hr>A \u2227 B"
 
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) =
-        formula is Conj
+    override fun canApply(formula: Formula, forward: Boolean): Boolean =
+        !forward && formula is Conj
 
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf((formula as Conj).sub1, formula.sub2)
+    override fun apply(proofTree: ProofTree, input: Formula?) =
+        proofTree.extendLeaf(this,
+            listOf(ProofTree((proofTree.formula as Conj).sub1),
+                ProofTree(proofTree.formula.sub2)))
 
-}
-
-data object AndElim1: ProofRule("andE1", "\u2227E\u2097") {
-    override val schema = "A \u2227 <span class=\"prompted\">B</span><hr>A"
-
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) = true
-
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf(Conj(formula, input ?: FAIL("input required!")))
-
-    override fun recoverInput(children: List<ProofTree>) = (children[0].formula as Conj).sub2
-}
-
-data object AndElim2: ProofRule("andE2", "\u2227E\u1d63") {
-    override val schema = "<span class=\"prompted\">B</span> \u2227 A<hr>A"
-
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) = true
-
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf(Conj(input ?: FAIL("input required!"), formula))
-    override fun recoverInput(children: List<ProofTree>) =
-        (children[0].formula as Conj).sub1
 }
 
 data object OrIntro1: ProofRule("orI1", "\u2228I\u2097") {
     override val schema = "A<hr>A \u2228 B"
 
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) =
-        formula is Disj
+    override fun canApply(formula: Formula, forward: Boolean): Boolean =
+        !forward && formula is Disj
 
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf((formula as Disj).sub1)
+    override fun apply(proofTree: ProofTree, input: Formula?): ProofTree =
+        proofTree.extendLeaf(this,
+            listOf(ProofTree((proofTree.formula as Disj).sub1)))
 }
 
 data object OrIntro2: ProofRule("orI2", "\u2228I\u1d63") {
     override val schema = "B<hr>A \u2228 B"
 
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) =
-        formula is Disj
+    override fun canApply(formula: Formula, forward: Boolean): Boolean =
+        !forward && formula is Disj
 
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf((formula as Disj).sub2)
+    override fun apply(proofTree: ProofTree, input: Formula?): ProofTree =
+        proofTree.extendLeaf(this,
+            listOf(ProofTree((proofTree.formula as Disj).sub2)))
 }
 
-data object OrElim: ProofRule("orE", "\u2228E") {
-    override val schema = "<span class=\"prompted\">A \u2228 B</space> &emsp; A \u2192 C &emsp; B \u2192 C<hr>C"
-
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) = true
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?): List<Formula> {
-        if (input is Disj) {
-            val a = input.sub1
-            val b = input.sub2
-            return listOf(input, Implication(a, formula), Implication(b, formula))
-        } else {
-            throw RuleException("Für diese Regel muss die Eingabe eine Disjunktion sein. $input ist keine Implikation.")
-        }
-    }
-
-    override fun recoverInput(children: List<ProofTree>): Formula? =
-        children[0].formula
-}
 
 data object ImplIntro: ProofRule("impI", "\u2192I") {
     override val schema = "A \u22a2 B<hr>A \u2192 B"
 
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) =
-        formula is Implication
+    override fun canApply(formula: Formula, forward: Boolean): Boolean =
+        !forward && formula is Implication
 
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf((formula as Implication).sub2)
+    override fun apply(proofTree: ProofTree, input: Formula?): ProofTree =
+        proofTree.extendLeaf(this,
+            listOf(ProofTree((proofTree.formula as Implication).sub2)))
 
     fun filterAvailableAssumption(tree: ProofTree, assumptions: Set<Formula>): Set<Formula> =
         if(tree.appliedRule == ImplIntro) {
@@ -136,48 +111,118 @@ data object ImplIntro: ProofRule("impI", "\u2192I") {
         }
 }
 
-data object ImplElim: ProofRule("impE", "\u2192E") {
-    override val schema = "<span class=\"prompted\">A</span> &emsp; <span class=\"prompted\">A</span> \u2192 B<hr>B"
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) = true
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?): List<Formula> {
-        val inp = input ?: FAIL("Missing formula")
-        return listOf(inp, Implication(inp, formula))
-    }
-
-    override fun recoverInput(children: List<ProofTree>) =
-        children[0].formula
-}
 
 data object NotIntro: ProofRule("notI", "¬I") {
     override val schema = "A \u2192 \u22a5<hr>¬A"
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) =
-        formula is Neg
+    override fun canApply(formula: Formula, forward: Boolean): Boolean =
+        !forward && formula is Neg
 
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf(Implication((formula as Neg).sub, False))
-}
-
-data object NotElim: ProofRule("notE", "¬E") {
-    override val schema = "<span class=\"prompted\">A &emsp; ¬A</span><hr>\u22a5"
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) =
-        formula is False
-
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?): List<Formula> {
-        val inp = input ?: FAIL("Missing formula")
-        return listOf(inp, Neg(inp))
-    }
-
-    override fun recoverInput(children: List<ProofTree>) =
-        children[0].formula
+    override fun apply(proofTree: ProofTree, input: Formula?): ProofTree =
+        proofTree.extendLeaf(this, listOf(
+            ProofTree(Implication((proofTree.formula as Neg).sub, False))))
 }
 
 
 // NON INTUITIONISTIC!
 data object ReductioAdAbsurdum: ProofRule("RAA", "RAA") {
     override val schema = "¬A \u2192 \u22a5<hr>A"
-    override fun canApply(formula: Formula, assumptions: Set<Formula>) =
-        true
+    override fun canApply(formula: Formula, forward: Boolean): Boolean =
+        !forward
 
-    override fun apply(formula: Formula, assumptions: Set<Formula>, input: Formula?) =
-        listOf(Implication(Neg(formula), False))
+    override fun apply(proofTree: ProofTree, input: Formula?): ProofTree =
+        proofTree.extendLeaf(this, listOf(
+            ProofTree(Implication(Neg(proofTree.formula), False))))
 }
+
+// forward rules
+
+data object AndElim1: ProofRule("andE1", "\u2227E\u2097") {
+    override val schema = "A \u2227 <span class=\"prompted\">B</span><hr>A"
+
+    override fun canApply(formula: Formula, forward: Boolean): Boolean =
+        forward && formula is Conj
+
+    override fun apply(proofTree: ProofTree, input: Formula?): ProofTree =
+        ProofTree((proofTree.formula as Conj).sub1, this, listOf(proofTree))
+
+}
+
+data object AndElim2: ProofRule("andE2", "\u2227E\u1d63") {
+    override val schema = "<span class=\"prompted\">B</span> \u2227 A<hr>A"
+
+    override fun canApply(formula: Formula, forward: Boolean): Boolean =
+        forward && formula is Conj
+
+    override fun apply(proofTree: ProofTree, input: Formula?): ProofTree =
+        ProofTree((proofTree.formula as Conj).sub2, this, listOf(proofTree))
+
+}
+
+
+data object OrElim: ProofRule("orE", "\u2228E") {
+    override val schema = "<span class=\"prompted\">A \u2228 B</space> &emsp; A \u2192 C &emsp; B \u2192 C<hr>C"
+
+    override fun canApply(formula: Formula, forward: Boolean): Boolean =
+        forward && formula is Disj
+
+    override fun apply(proofTree: ProofTree, input: Formula?): ProofTree {
+        if (proofTree.formula is Disj) {
+            assert(input != null, "Input must not be null")
+            val a = proofTree.formula.sub1
+            val b = proofTree.formula.sub2
+            return ProofTree(
+                input!!, this, listOf(
+                    proofTree,
+                    ProofTree(Implication(a, input)),
+                    ProofTree(Implication(b, input))
+                )
+            )
+        } else {
+            throw RuleException("Für diese Regel muss die Eingabe eine Disjunktion sein. $input ist keine Implikation.")
+        }
+    }
+}
+
+
+data object ImplElim : ProofRule("impE", "\u2192E") {
+    override val schema = "<span class=\"prompted\">A</span> &emsp; <span class=\"prompted\">A</span> \u2192 B<hr>B"
+    override fun canApply(formula: Formula, forward: Boolean): Boolean =
+        forward && formula is Implication
+
+    override fun apply(proofTree: ProofTree, input: Formula?): ProofTree {
+        val imp = proofTree.formula as Implication
+        return ProofTree(
+            imp.sub2, this, listOf(
+                ProofTree(imp.sub1),
+                proofTree
+            )
+        )
+    }
+}
+
+
+data object NotElim : ProofRule("notE", "¬E") {
+    override val schema = "<span class=\"prompted\">A &emsp; ¬A</span><hr>\u22a5"
+    override fun canApply(formula: Formula, forward: Boolean): Boolean =
+        forward
+
+    override fun apply(proofTree: ProofTree, input: Formula?): ProofTree {
+        if(proofTree.formula is Neg) {
+        val imp = proofTree.formula as Neg
+        return ProofTree(
+            False, this, listOf(
+                ProofTree(imp.sub),
+                proofTree
+            )
+        )
+        } else {
+            return ProofTree(
+                False, this, listOf(
+                    proofTree,
+                    ProofTree(Neg(proofTree.formula)),
+                )
+            )
+        }
+    }
+}
+

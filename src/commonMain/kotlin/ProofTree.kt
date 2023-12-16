@@ -8,35 +8,37 @@ data class ProofTree(val formula: Formula, val appliedRule: ProofRule?, val chil
     val isClosed: Boolean
         get() = !isLeaf && children.all { it.isClosed }
 
-    fun apply(idx: String, rule: ProofRule, input: Formula? = null): ProofTree {
-        return apply(idx, rule, input, setOf<Formula>())
+    fun apply(idx: String, rule: ProofRule): ProofTree {
+        return apply(idx, rule, null)
     }
 
-    private fun apply(idx: String, rule: ProofRule, input: Formula?, assumptions: Set<Formula>): ProofTree {
+    private fun apply(idx: String, rule: ProofRule, belowFormula: Formula?): ProofTree {
         // println("Applying onto $idx")
         val dropped = idx.substring(1);
         if(dropped.length == 0 ) {
-            assert(appliedRule == null, "There is already rule applied: $appliedRule")
-            val newkids = rule.apply(formula, assumptions, input)
-            val newtrees = newkids.map { ProofTree(it) }
-            return ProofTree(formula, rule, newtrees)
+            val newTree = rule.apply(this, belowFormula)
+            return newTree
         } else {
             val no = dropped[0].digitToInt()
-            val newass = if(appliedRule is ImplIntro) assumptions + formula else assumptions
-            val updChildren = children.updated(no, children[no].apply(dropped, rule, input, newass))
+            val updChildren = children.updated(no, children[no].apply(dropped, rule, formula))
             return ProofTree(formula, appliedRule, updChildren)
+        }
+    }
+
+    fun startForwardProof(idx: String, assumption: Formula): ProofTree {
+        val dropped = idx.substring(1);
+        if(dropped.length == 0 ) {
+            return AxiomRule.apply(this, assumption)
+        } else {
+            val no = dropped[0].digitToInt()
+            val updChildren = children.updated(no, children[no].startForwardProof(dropped, assumption))
+            return ProofTree(this.formula, appliedRule, updChildren)
         }
     }
 
     fun verify(assumptions: Set<Formula> = setOf()) {
         if (appliedRule != null) {
-            val input = appliedRule.recoverInput(children)
-            val result = appliedRule.apply(formula, assumptions, input)
-            val childFormulas = children.map { it.formula }
-            if(result != childFormulas) {
-                FAIL("DIFF. place details here")
-            }
-
+            appliedRule.check(this, assumptions)
             val newAssumptions = if(appliedRule == ImplIntro) assumptions + (formula as Implication).sub1 else assumptions
             children.forEach { it.verify(newAssumptions) }
         }
@@ -55,13 +57,8 @@ data class ProofTree(val formula: Formula, val appliedRule: ProofRule?, val chil
         return tree to availAssumptions
     }
 
-    fun getApplicableRules(idx: String): List<ProofRule> {
-        val (tree, availAssumptions) = navigate(idx)
-        return tree.getApplicableRules(availAssumptions)
-    }
-
-    fun getApplicableRules(availAssumptions: Set<Formula>): List<ProofRule> =
-        allRules.filter { it.canApply(formula, availAssumptions) }
+    fun getApplicableRules(availAssumptions: Set<Formula>, forward: Boolean): List<ProofRule> =
+        allRules.filter { it.canApply(formula, forward) }
 
     fun remove(idx: String): ProofTree {
         val dropped = idx.substring(1)
@@ -84,4 +81,8 @@ data class ProofTree(val formula: Formula, val appliedRule: ProofRule?, val chil
         }
         return result
     }
+
+    fun removeGaps() : ProofTree =
+        if(appliedRule == Gap && formula == children[0].formula) children[0]
+        else ProofTree(formula, appliedRule, children.map { it.removeGaps() })
 }

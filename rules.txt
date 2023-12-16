@@ -1,0 +1,15 @@
+
+Ax: special
+
+. andI: backward   a&b ==> a , b
+. orI1: backward   a|b ==> a
+. orI2: backward   a|b ==> b
+. impI: backward   a->b ==> b
+. notI: backward   -a ==> a->\bot
+. raa:  backward    a ==> -a->\bot
+
+. andE1: forward   a&b ==> a
+. andE2: forward   a&b ==> b
+. impE:  forward   a->b ==> OPEN(a), USABLE(b)
+. notE:  forward   -a ==> OPEN(a), USABLE(\bottom)
+. orE:   forward   a|b, GOAL(c) ==> OPEN(a->c), OPEN(b->c)
