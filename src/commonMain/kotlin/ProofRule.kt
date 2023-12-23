@@ -51,6 +51,9 @@ data object AxiomRule: ProofRule("ax", "Ax") {
         )
     }
 
+    fun assume(formula: Formula): ProofTree =
+        ProofTree(formula, this, listOf())
+
 }
 
 // Backward rules:
@@ -204,7 +207,7 @@ data object ImplElim : ProofRule("impE", "\u2192E") {
 data object NotElim : ProofRule("notE", "¬E") {
     override val schema = "<span class=\"prompted\">A &emsp; ¬A</span><hr>\u22a5"
     override fun canApply(formula: Formula, forward: Boolean): Boolean =
-        forward
+        forward && formula is Neg
 
     override fun apply(proofTree: ProofTree, input: Formula?): ProofTree {
         if(proofTree.formula is Neg) {

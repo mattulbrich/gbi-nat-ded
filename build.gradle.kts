@@ -34,6 +34,7 @@ kotlin {
         mainRun {
             mainClass = "MainKt"
         }
+
     }
     sourceSets {
         val commonMain by getting {
