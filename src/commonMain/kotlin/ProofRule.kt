@@ -140,7 +140,7 @@ data object ReductioAdAbsurdum: ProofRule("RAA", "RAA") {
 // forward rules
 
 data object AndElim1: ProofRule("andE1", "\u2227E\u2097") {
-    override val schema = "A \u2227 <span class=\"prompted\">B</span><hr>A"
+    override val schema = "A \u2227 B<hr>A"
 
     override fun canApply(formula: Formula, forward: Boolean): Boolean =
         forward && formula is Conj
@@ -151,7 +151,7 @@ data object AndElim1: ProofRule("andE1", "\u2227E\u2097") {
 }
 
 data object AndElim2: ProofRule("andE2", "\u2227E\u1d63") {
-    override val schema = "<span class=\"prompted\">B</span> \u2227 A<hr>A"
+    override val schema = "A \u2227 B<hr>B"
 
     override fun canApply(formula: Formula, forward: Boolean): Boolean =
         forward && formula is Conj
@@ -161,9 +161,8 @@ data object AndElim2: ProofRule("andE2", "\u2227E\u1d63") {
 
 }
 
-
 data object OrElim: ProofRule("orE", "\u2228E") {
-    override val schema = "<span class=\"prompted\">A \u2228 B</space> &emsp; A \u2192 C &emsp; B \u2192 C<hr>C"
+    override val schema = "<b>A \u2228 B</b> &emsp; A \u2192 C &emsp; B \u2192 C<hr><b>C</b>"
 
     override fun canApply(formula: Formula, forward: Boolean): Boolean =
         forward && formula is Disj
@@ -188,7 +187,7 @@ data object OrElim: ProofRule("orE", "\u2228E") {
 
 
 data object ImplElim : ProofRule("impE", "\u2192E") {
-    override val schema = "<span class=\"prompted\">A</span> &emsp; <span class=\"prompted\">A</span> \u2192 B<hr>B"
+    override val schema = "<b>A \u2192 B</b> &emsp; A<hr>B"
     override fun canApply(formula: Formula, forward: Boolean): Boolean =
         forward && formula is Implication
 
@@ -205,7 +204,7 @@ data object ImplElim : ProofRule("impE", "\u2192E") {
 
 
 data object NotElim : ProofRule("notE", "¬E") {
-    override val schema = "<span class=\"prompted\">A &emsp; ¬A</span><hr>\u22a5"
+    override val schema = "<b>¬A</b> &emsp; A<hr>\u22a5"
     override fun canApply(formula: Formula, forward: Boolean): Boolean =
         forward && formula is Neg
 
@@ -228,4 +227,3 @@ data object NotElim : ProofRule("notE", "¬E") {
         }
     }
 }
-

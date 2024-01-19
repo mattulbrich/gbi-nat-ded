@@ -38,21 +38,23 @@ hr.ruled {
 }
 
 hr.unruled {
-  border-top: 3px dotted red;
-  border-bottom: 0px;
-  border-left: 0px;
-  border-right: 0px;
-  background: inherit;
-  height: 1px;
-  margin: 0px;
+  border: 0;
+  border-bottom: 2px solid #f7a50f;
+  background-image: url("up.png");
+  background-color: transparent;
+  height: 15px;
+  margin: 0;
 }
 
 hr.gap {
-  border: 1px solid #f7a50f;
-  height: 20px;
+  border: 2px solid #f7a50f;
+  border-left: 0;
+  border-right: 0;
+  height: 30px;
   margin: 0;
-  background-image: linear-gradient(45deg, #f7a50f 25%, transparent 25%, transparent 50%, #f7a50f 50%, #f7a50f 75%, transparent 75%, transparent 100%);
-  background-size: 14.14px 14.14px;
+  background-color: transparent;
+  background-image: url("dn.png");
+  background-repeat: repeat-x;
 }
 
 span.rulename {
@@ -98,7 +100,7 @@ span.namedRule {
 }
 
 #menu div:hover .tooltip {
-  left: 300px;
+  left: 100px;
   visibility: visible;
 }
 
