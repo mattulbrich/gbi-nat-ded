@@ -85,4 +85,97 @@ data class ProofTree(val formula: Formula, val appliedRule: ProofRule?, val chil
     fun removeGaps() : ProofTree =
         if(appliedRule == Gap && formula == children[0].formula) children[0]
         else ProofTree(formula, appliedRule, children.map { it.removeGaps() })
+
+    fun export(ass: List<Formula> = listOf()): String {
+        if (appliedRule == null) return "open|";
+
+        val assNow = if(appliedRule == ImplIntro && !ass.contains((formula as Implication).sub1))
+            ass + formula.sub1 else ass
+
+        if (appliedRule == AxiomRule) {
+            val index = ass.indexOf(formula)
+            assert(index >= 0, "Unknown formula $formula")
+            return appliedRule.name + " $index|"
+        }
+
+        return appliedRule.name +
+                "|" + children.map { it.export(assNow) }.joinToString("")
+    }
+
+    companion object {
+        fun import(formula: Formula, proof: String): ProofTree {
+            val pt = ProofTree(formula)
+            val steps = proof.substring(0, proof.length - 1).split("|").toMutableList()
+            return pt.importFrom(steps, listOf())
+        }
+    }
+
+    private fun importFrom(steps: MutableList<String>, ass: List<Formula>): ProofTree {
+
+        assert(appliedRule == null, "There must not yet be a rule app")
+
+        val step = steps.removeFirst()
+
+        if(step.startsWith("ax ")) {
+            val idx = step.substring(3).toInt()
+            val formula = ass[idx]
+            return AxiomRule.assume(formula)
+        }
+
+        if(step == "open") {
+            // it is as it is ...
+            return this
+        }
+
+        if(step == "gap") {
+            val fwstep = this.importFrom(steps, ass)
+            return ProofTree(formula, Gap, listOf(fwstep))
+        }
+
+        val rule = ruleMap[step]
+        if(rule == null) FAIL("Unknown rule $step")
+
+        if(rule.canApply(formula, false)) {
+            // backward application in depth. ...
+            val onestep = rule.apply(this)
+            val assNow = if(rule == ImplIntro && !ass.contains((formula as Implication).sub1))
+                ass + formula.sub1 else ass
+            val newchildren = onestep.children.map { it.importFrom(steps, assNow) }
+            return ProofTree(formula, rule, newchildren)
+        }
+
+        val forward = this.importFrom(steps, ass)
+        if(rule.canApply(forward.formula, true)) {
+            val fwstep = rule.apply(forward, formula)
+            val newChildren = fwstep.children.mapIndexed { index, tree ->
+                if(index == 0) tree
+                else tree.importFrom(steps, ass)
+            }
+//            assert(fwstep.formula == formula, "different formulas ${fwstep.formula} and $formula")
+            return ProofTree(fwstep.formula, rule, newChildren)
+        }
+
+        FAIL("Nope. cannot proof apply here.")
+    }
+
 }
+
+/*
+if (appliedRule.isForward) {
+            var pt: ProofTree = this
+            val result = StringBuilder()
+            while (true) {
+                assert(pt.children.size <= 1, "Expecting at most one child, not " + children.size)
+                if(pt.children.isEmpty()) {
+                    assert(pt.appliedRule == AxiomRule, "Expected axiom at leaf, not " + pt.appliedRule?.name)
+                    val index = ass.indexOf(pt.formula)
+                    assert(index >= 0, "Unknown formula $formula")
+                    result.insert(0, pt.appliedRule?.name + " $index|")
+                    return result.toString()
+                }
+                result.insert(0, pt.appliedRule?.name + "|")
+                pt = pt.children.first()
+            }
+        }
+
+ */

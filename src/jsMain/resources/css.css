@@ -132,3 +132,21 @@ span.namedRule {
 #menu > form > div:hover {
   background-color: #F7A50F;
 }
+
+@-webkit-keyframes fadeout{
+    0%{opacity:1;visibility:visible;}
+    99%{opacity:0;}
+    100%{opacity:0;visibility: hidden;}
+}
+
+.fadeout {
+    -webkit-animation:fadeout 1s linear;
+    visibility:hidden;
+}
+
+#copied {
+  /*background: #FDF1DD;
+  border-radius: 6px;
+  border: 2px solid #F7A50F;
+  padding: 5px;*/
+}

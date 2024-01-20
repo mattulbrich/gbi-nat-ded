@@ -15,6 +15,7 @@ sealed class ProofRule(val name: String, val displayName: String) {
     }
 }
 
+// may be modified for constructivism
 var allRules = listOf(
     // backwards:
     AndIntro, OrIntro1, OrIntro2, ImplIntro, NotIntro, ReductioAdAbsurdum,
@@ -22,9 +23,9 @@ var allRules = listOf(
     AndElim1, AndElim2, OrElim, ImplElim, NotElim,
 )
 
-val ruleMap = allRules.map { it.name to it }.toMap()
+val ruleMap by lazy { allRules.map { it.name to it }.toMap() }
 
-data object Gap: ProofRule("GAP", "GAP") {
+data object Gap: ProofRule("gap", "GAP") {
     override val schema
         get() = FAIL("does not apply")
 
@@ -180,7 +181,7 @@ data object OrElim: ProofRule("orE", "\u2228E") {
                 )
             )
         } else {
-            throw RuleException("Für diese Regel muss die Eingabe eine Disjunktion sein. $input ist keine Implikation.")
+            throw RuleException("Für diese Regel muss die Eingabe eine Disjunktion sein. $input ist keine Disjunktion.")
         }
     }
 }
@@ -195,13 +196,12 @@ data object ImplElim : ProofRule("impE", "\u2192E") {
         val imp = proofTree.formula as Implication
         return ProofTree(
             imp.sub2, this, listOf(
-                ProofTree(imp.sub1),
-                proofTree
+                proofTree,
+                ProofTree(imp.sub1)
             )
         )
     }
 }
-
 
 data object NotElim : ProofRule("notE", "¬E") {
     override val schema = "<b>¬A</b> &emsp; A<hr>\u22a5"
@@ -210,18 +210,18 @@ data object NotElim : ProofRule("notE", "¬E") {
 
     override fun apply(proofTree: ProofTree, input: Formula?): ProofTree {
         if(proofTree.formula is Neg) {
-        val imp = proofTree.formula as Neg
-        return ProofTree(
-            False, this, listOf(
-                ProofTree(imp.sub),
-                proofTree
-            )
-        )
-        } else {
+            val imp = proofTree.formula as Neg
             return ProofTree(
                 False, this, listOf(
                     proofTree,
+                    ProofTree(imp.sub)
+                )
+            )
+        } else {
+            return ProofTree(
+                False, this, listOf(
                     ProofTree(Neg(proofTree.formula)),
+                    proofTree
                 )
             )
         }

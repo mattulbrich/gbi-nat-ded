@@ -13,6 +13,7 @@ const val defaultFormula = "P & Q -> Q & P"
 var theProofTree : ProofTree? = null
 var lastMenuEvent: Event? = null
 var autoMode = false
+var proof: String? = null
 
 
 fun clickLeaf(e: Event, idx: String) {
@@ -55,17 +56,42 @@ fun main() {
         Unit
     }
 
+    (document.getElementById("copyLink") as HTMLElement).onclick = { copyLink() }
+
     val argFormula = interpretURL()
 
     try {
         println(argFormula)
         val goal = formulaGrammar.parseToEnd(argFormula)
-        val pt = if(autoMode) findProof(goal) ?: ProofTree(goal) else ProofTree(goal)
+        val pt = when {
+            autoMode -> findProof(goal) ?: ProofTree(goal)
+            proof != null -> ProofTree.import(goal, proof!!)
+            else -> ProofTree(goal)
+        }
         setProofTree(pt)
     } catch(e: RuntimeException) {
         window.alert("Cannot parse '$argFormula'")
         e.printStackTrace()
     }
+}
+
+fun copyLink() {
+    println("Copy Link")
+    val qmark = document.URL.indexOf('?')
+    val baseURL = if(qmark > 0) document.URL.substring(0, qmark) else document.URL
+    val form = theProofTree?.formula?.toASCII()
+    val proof = theProofTree?.export()
+    val con = if(allRules.contains(ReductioAdAbsurdum)) "" else ";constructive"
+    val url = "$baseURL?$form;proof=$proof$con"
+    window.navigator.clipboard.writeText(url);
+
+    val copiedBox = document.getElementById("copied") as HTMLElement
+    copiedBox.style.visibility = "";
+    copiedBox.classList.remove("fadeout")
+
+    window.setTimeout(
+        {
+        copiedBox.classList.add("fadeout");}, 3000);
 }
 
 private fun interpretURL(): String {
@@ -78,11 +104,16 @@ private fun interpretURL(): String {
     val parts = query.split(";")
     val result = parts.first()
     autoMode = parts.contains("auto")
+    if(parts.contains("constructive") || parts.contains("intuitionsitic") || parts.contains("BHK")) {
+        allRules = allRules - ReductioAdAbsurdum
+    }
+    proof = parts.firstOrNull { it.startsWith("proof=") }?.substring(6)
+    if(proof != null) proof = decode(proof!!)
     return decode(result)
 }
 
 fun setProofTree(pr: ProofTree) {
-    val p2 = document.getElementById("proof2") ?: TODO()
+    val p2 = document.getElementById("proof") ?: TODO()
     p2.children.asList().forEach { p2.removeChild(it) }
     val container = document.create.html {
         pr.layout("x", setOf(), false, consumer)
